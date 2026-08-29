@@ -5,9 +5,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from .image_api import router as image_router
 
-app=FastAPI(title='Realizer V1 Backend',version='1.1.0')
+app=FastAPI(title='Realizer V1 Backend',version='1.1.1')
 app.add_middleware(CORSMiddleware,allow_origins=['*'],allow_credentials=False,allow_methods=['*'],allow_headers=['*'])
+app.include_router(image_router)
 JOBS={}
 
 def comfy_url(): return os.getenv('COMFYUI_URL','http://127.0.0.1:8188').rstrip('/')
@@ -46,7 +48,7 @@ def patch_workflow(wf,req):
 def queue_comfy(wf):
     r=requests.post(comfy_url()+'/prompt',json={'prompt':wf,'client_id':str(uuid.uuid4())},timeout=30)
     if not r.ok:raise RuntimeError(f'ComfyUI /prompt HTTP {r.status_code}: {r.text[:500]}')
-    d=r.json(); pid=d.get('prompt_id')
+    pid=r.json().get('prompt_id')
     if not pid:raise RuntimeError('ComfyUI returned no prompt_id')
     return pid
 
@@ -65,7 +67,7 @@ def video_url_from_history(h):
     return None
 
 @app.get('/api/health')
-def health():return {'ok':True,'service':'realizer-backend','version':'1.1.0','comfyui_reachable':comfy_reachable(),'image_to_video_endpoint':True}
+def health():return {'ok':True,'service':'realizer-backend','version':'1.1.1','comfyui_reachable':comfy_reachable(),'image_to_video_endpoint':True}
 
 @app.get('/api/setup/scan')
 def scan():

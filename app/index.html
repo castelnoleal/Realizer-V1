@@ -1,1 +1,19 @@
-placeholder
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Realizer V1 • AI Video Studio</title>
+<style>
+:root{--bg:#07080c;--panel:#10131a;--panel2:#151923;--line:#272c38;--text:#f4f6fb;--muted:#9299aa;--accent:#8b5cf6;--accent2:#06b6d4;--danger:#ef4444}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0%,#18102e 0,#07080c 38%),var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<main style="max-width:1100px;margin:auto;padding:24px"><header><h1>Realizer V1</h1><p style="color:var(--muted)">AI video studio gateway</p></header>
+<section style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px"><h2>Generation Gateway</h2><p>Text-to-video, storyboard and provider integration are being assembled here. The browser remains lightweight; inference runs through the configured backend.</p><label>Backend endpoint</label><input id="endpoint" value="http://127.0.0.1:8000" style="display:block;width:100%;padding:12px;margin:8px 0 14px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--text)"><button onclick="check()" style="padding:11px 16px;background:var(--accent);color:white;border:0;border-radius:9px">Check Backend</button><div id="status" style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:10px">Not checked.</div></section>
+</main>
+<script>
+async function check(){const s=document.getElementById('status');const u=document.getElementById('endpoint').value.replace(/\/$/,'');s.textContent='Checking…';try{const r=await fetch(u+'/api/health');const d=await r.json();s.textContent=d.ok?'✓ Realizer backend online':'Backend responded but is not ready';}catch(e){s.textContent='✗ Backend unavailable: '+e.message}}
+</script></body></html>

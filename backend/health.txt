@@ -1,0 +1,1 @@
+Realizer backend health endpoint: /api/health

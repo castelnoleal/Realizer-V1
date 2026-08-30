@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Realizer V1 — Free AI Video Test</title>
+<style>
+body{margin:0;background:#07080c;color:#f4f6fb;font:15px system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:900px;margin:auto;padding:20px}.card{background:#10131a;border:1px solid #272c38;border-radius:16px;padding:20px;margin:14px 0}textarea,input,button{font:inherit;width:100%;box-sizing:border-box;border-radius:10px;padding:12px;background:#151923;color:#fff;border:1px solid #303646;margin-top:8px}button{cursor:pointer;background:#8b5cf6;border-color:#8b5cf6;font-weight:700}button:disabled{opacity:.55;cursor:wait}.tabs{display:flex;gap:8px}.tabs button{background:#151923;border-color:#303646}.tabs button.active{background:#8b5cf6;border-color:#8b5cf6}.hidden{display:none}.muted{color:#9299aa}.status{padding:10px;border-radius:10px;background:#151923;margin-top:12px}.ok{color:#22c55e}.err{color:#ef4444}.warn{color:#f59e0b}.preview{width:100%;border-radius:12px;margin-top:14px;background:#000}.drop{border:2px dashed #475569;padding:25px;text-align:center;border-radius:12px;margin-top:8px}.drop img{max-width:100%;max-height:300px;margin-top:12px;border-radius:10px}@media(max-width:600px){.wrap{padding:12px}.card{padding:15px}}
+</style>
+</head>
+<body><main class="wrap">
+<h1>Realizer V1</h1><p class="muted">Free browser generation test • open model • temporary compute</p>
+<div class="card"><div class="tabs"><button id="t2vTab" class="active">Text → Video</button><button id="i2vTab">Image → Video</button></div>
+<label>Prompt</label><textarea id="prompt" rows="5" placeholder="A cinematic drone shot over a futuristic coastal city at sunset, realistic lighting, smooth camera movement"></textarea>
+<div id="imageBox" class="hidden"><label>Reference image</label><div class="drop"><input id="image" type="file" accept="image/jpeg,image/png,image/webp"><div id="imagePreview"></div></div></div>
+<label>Duration: <span id="durationValue">3</span> seconds</label><input id="duration" type="range" min="1" max="3" value="3">
+<button id="generate">🎬 Generate Video</button>
+<div id="status" class="status">Ready. The first generation may take time while the free GPU is allocated.</div>
+<div id="result"></div></div>
+<div class="card"><b>Engine</b><p class="muted">Pyramid Flow — public Hugging Face ZeroGPU Space. Realizer only uses it as temporary compute for this test.</p><p id="diagnostic" class="muted">Checking engine availability…</p></div>
+</main>
+<script type="module">
+import { Client, handle_file } from 'https://esm.sh/@gradio/client@1.19.1';
+const SPACE='Pyramid-Flow/pyramid-flow';
+const $=id=>document.getElementById(id);let mode='t2v',imageFile=null;
+function status(text,cls=''){ $('status').className='status '+cls;$('status').textContent=text }
+$('t2vTab').onclick=()=>{mode='t2v';$('t2vTab').classList.add('active');$('i2vTab').classList.remove('active');$('imageBox').classList.add('hidden');status('Ready for text-to-video.')};
+$('i2vTab').onclick=()=>{mode='i2v';$('i2vTab').classList.add('active');$('t2vTab').classList.remove('active');$('imageBox').classList.remove('hidden');status('Select an image, then generate.')};
+$('duration').oninput=()=>$('durationValue').textContent=$('duration').value;
+$('image').onchange=e=>{imageFile=e.target.files[0]||null;if(!imageFile){$('imagePreview').innerHTML='';return}const u=URL.createObjectURL(imageFile);$('imagePreview').innerHTML='<img src="'+u+'" alt="Reference image">'};
+async function connect(){return await Client.connect(SPACE,{events:false})}
+$('generate').onclick=async()=>{
+ const prompt=$('prompt').value.trim();if(!prompt)return status('Enter a prompt first.','err');if(mode==='i2v'&&!imageFile)return status('Choose a reference image first.','err');
+ const btn=$('generate');btn.disabled=true;$('result').innerHTML='';status('Connecting to the free generation engine…','warn');
+ try{
+  const app=await connect();
+  status('Connected. Submitting job to the free GPU queue…','warn');
+  const image=mode==='i2v'?await handle_file(imageFile):null;
+  const duration=Number($('duration').value);
+  const result=await app.predict('/generate_video',[image,prompt,duration,9,5]);
+  let data=result?.data;let output=null;
+  if(Array.isArray(data)) output=data.find(x=>x&&typeof x==='object'&&(x.url||x.path||x.video))||data[data.length-1]; else output=data;
+  let url=output?.url||output?.video?.url;
+  if(!url&&typeof output==='string'&&/^https?:/i.test(output))url=output;
+  if(!url)throw new Error('The engine completed without returning a video file. Raw response: '+JSON.stringify(data).slice(0,600));
+  $('result').innerHTML='<video class="preview" controls playsinline src="'+url+'"></video><p><a style="color:#a78bfa" target="_blank" rel="noopener" href="'+url+'">Open generated video</a></p>';
+  status('Generation completed successfully.','ok');
+ }catch(e){console.error(e);status('Generation failed: '+(e?.message||e),'err');$('result').innerHTML='<p class="muted">If the public ZeroGPU is busy or temporarily unavailable, retry after a short wait. This is a temporary test backend, not the final Realizer engine.</p>'}
+ finally{btn.disabled=false}
+};
+(async()=>{try{const app=await connect();$('diagnostic').textContent='✓ Public generation engine is reachable from the browser.'}catch(e){$('diagnostic').textContent='⚠ Engine connection test failed: '+(e?.message||e)}})();
+</script></body></html>
